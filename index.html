@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.Tech Capstone Portal & Validator</title>
+    <script src="https://tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans">
+
+    <header class="bg-gray-800 border-b border-gray-700 py-6 px-8 shadow-md">
+        <h1 class="text-2xl font-bold tracking-tight text-indigo-400">🎓 B.Tech Capstone Portal</h1>
+        <p class="text-sm text-gray-400 mt-1">3-Gate Deterministic AI Compliance Agent Validation System</p>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <section class="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col shadow-lg">
+            <h2 class="text-lg font-semibold text-gray-200 mb-3">Project Proposal Input</h2>
+            <p class="text-xs text-gray-400 mb-4">Type out your project team details naturally. The local AI will extract and validate parameters instantly.</p>
+            
+            <textarea id="promptInput" 
+                class="w-full flex-1 p-4 bg-gray-950 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm resize-none min-h-[300px]"
+                placeholder="Example: We are a group of 3 students from the CSE department. Our roll numbers are 202301, 202302, and 202303. For our project, we plan to write our code using Python and VS Code, manage versions via GitHub Enterprise, and host our database on MongoDB Atlas."></textarea>
+            
+            <button id="validateBtn" onclick="runValidation()" 
+                class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition duration-200 ease-in-out shadow-md flex justify-center items-center gap-2">
+                <span>⚡ Validate Project Proposal</span>
+            </button>
+        </section>
+
+        <section class="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col shadow-lg">
+            <h2 class="text-lg font-semibold text-gray-200 mb-4">Live Agent Compliance Report</h2>
+            
+            <div id="statusAlert" class="mb-6 p-4 rounded-lg bg-gray-750 border border-gray-700 text-center flex items-center justify-center min-h-[80px]">
+                <div class="text-gray-400 italic">Submit a proposal to generate a real-time validation check.</div>
+            </div>
+
+            <div class="space-y-6 flex-1">
+                <div class="border border-gray-700 rounded-lg p-4 bg-gray-950">
+                    <h3 class="text-sm font-semibold tracking-wide text-indigo-400 mb-2 uppercase">Gate 1: Team Structure Check</h3>
+                    <div id="teamCheckText" class="text-sm text-gray-400">Awaiting input details...</div>
+                </div>
+
+                <div class="border border-gray-700 rounded-lg p-4 bg-gray-950">
+                    <h3 class="text-sm font-semibold tracking-wide text-indigo-400 mb-3 uppercase">Gate 2: Software Allowlist Check</h3>
+                    
+                    <div class="mb-3">
+                        <span class="text-xs text-green-400 font-medium block mb-1">Approved Assets:</span>
+                        <div id="approvedBadges" class="flex flex-wrap gap-2 text-sm text-gray-500 italic">None initialized</div>
+                    </div>
+                    
+                    <div>
+                        <span class="text-xs text-red-400 font-medium block mb-1">Blocked / Flagged Assets:</span>
+                        <div id="blockedBadges" class="flex flex-wrap gap-2 text-sm text-gray-500 italic">None initialized</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        async function runValidation() {
+            const promptText = document.getElementById("promptInput").value.trim();
+            const btn = document.getElementById("validateBtn");
+            const statusAlert = document.getElementById("statusAlert");
+            const teamCheckText = document.getElementById("teamCheckText");
+            const approvedBadges = document.getElementById("approvedBadges");
+            const blockedBadges = document.getElementById("blockedBadges");
+
+            if (!promptText) {
+                alert("Please type a project proposal sentence first!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span>Processing Local Agent Gates...</span>`;
+            statusAlert.className = "mb-6 p-4 rounded-lg bg-gray-750 border border-gray-700 text-center text-indigo-400 font-medium animate-pulse";
+            statusAlert.innerHTML = "Ollama model llama3.1:8b is parsing variables structure...";
+
+            try {
+                const response = await fetch("http://127.0.0", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+
+                if (!response.ok) throw new Error("Backend connection lost.");
+
+                const data = await response.json();
+
+                if (data.overall_approved) {
+                    statusAlert.className = "mb-6 p-4 rounded-lg bg-green-900/40 border border-green-500 text-green-300 font-bold text-center text-lg";
+                    statusAlert.innerHTML = "✅ PROPOSAL STATUS: APPROVED FOR REGISTRATION";
+                } else {
+                    statusAlert.className = "mb-6 p-4 rounded-lg bg-red-900/40 border border-red-500 text-red-300 font-bold text-center text-lg";
+                    statusAlert.innerHTML = "⚠️ PROPOSAL STATUS: ACTION REQUIRED";
+                }
+
+                if (data.team_status.status === "APPROVED") {
+                    teamCheckText.innerHTML = `<span class="text-green-400 font-medium">✔️ Approved:</span> ${data.team_status.message}`;
+                } else {
+                    teamCheckText.innerHTML = `<span class="text-red-400 font-medium">❌ Rejected:</span> ${data.team_status.message}`;
+                }
+
+                approvedBadges.innerHTML = data.resource_status.approved.length 
+                    ? data.resource_status.approved.map(item => `<span class="px-2.5 py-1 text-xs font-semibold rounded bg-green-950 text-green-300 border border-green-800">${item}</span>`).join(" ")
+                    : `<span class="text-xs text-gray-500 italic">None detected</span>`;
+
+                blockedBadges.innerHTML = data.resource_status.blocked.length 
+                    ? data.resource_status.blocked.map(item => `<span class="px-2.5 py-1 text-xs font-semibold rounded bg-red-950 text-red-300 border border-red-800">${item}</span>`).join(" ")
+                    : `<span class="text-xs text-gray-500 italic">No violations flagged</span>`;
+
+            } catch (error) {
+                statusAlert.className = "mb-6 p-4 rounded-lg bg-yellow-900/40 border border-yellow-600 text-yellow-300 text-sm font-medium text-center";
+                statusAlert.innerHTML = `🚨 Error connecting to Local Server. Ensure 'python app.py' is actively running.`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>⚡ Validate Project Proposal</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
